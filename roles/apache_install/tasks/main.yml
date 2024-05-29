@@ -1,0 +1,17 @@
+---
+# tasks file for apache_install
+- name: Install Apache
+  ansible.builtin.dnf:
+    name: httpd
+
+- name: Enable and start Apache service
+  ansible.builtin.service:
+    name: httpd
+    enabled: true
+    state: started
+
+- name: Copy index.html
+  ansible.builtin.copy:
+    src: index.html
+    dest: /var/www/html/index.html
+    mode: '644'

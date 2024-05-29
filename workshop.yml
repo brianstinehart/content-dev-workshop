@@ -171,7 +171,11 @@
 
     ### Ensure openscap-scanner is installed
 
-    - name: Ensure openscap-scanner is installed
-      ansible.builtin.package:
-        name: openscap-scanner
-        state: present
+    # - name: Ensure openscap-scanner is installed
+    #   ansible.builtin.package:
+    #     name: openscap-scanner
+    #     state: present
+
+    - name: Include DNF security package update role
+      ansible.builtin.include_role:
+        name: aws_rhel8_nist_cui
