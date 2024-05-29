@@ -1,0 +1,139 @@
+---
+- name: System Setup
+  hosts: all
+  become: true
+
+  tasks:
+
+    ### Update all DNF security packages
+    # Consider using the DNF module (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/dnf_module.html)
+    # Should this be its own role?
+
+    - name: Update all security-related DNF packages
+      ansible.builtin.dnf:
+        name: '*'
+        state: latest
+        security: true
+
+    ### Create a new user & make admin group the primary group for new user, add user to wheel group, check that user is present and debug/print to output
+    # Consider using the user module (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/user_module.html)
+    # Which tasks could be included in a role? All of them?
+
+    - name: Create a new user
+      ansible.builtin.user:
+        name: myuser
+        state: present
+        create_home: true
+        group: admin
+
+    - name: Give new user sudo privileges (wheel group)
+      ansible.builtin.user:
+        name: myuser
+        groups: wheel
+        append: true
+
+    # Consider using a block (https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_blocks.html)
+    # Consider checking for the user with the command module (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/command_module.html)
+    # You can use the debug module to print command output to screen (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/debug_module.html)
+    # Also consider creating separate
+
+    - name: Ensure user is present
+      block:
+        - name: Check user existence
+          ansible.builtin.command:
+            cmd: id myuser
+          register: user_check
+
+        - name: Report on present user account
+          ansible.builtin.debug:
+            msg: "User 'myuser' exists."
+          when: user_check.rc == 0
+
+        - name: Report on absent user account
+          ansible.builtin.debug:
+            msg: "User 'myuser' does not exists."
+          when: user_check.rc != 0
+
+    ### Install packages in a single task: NetworkManager, Chrony, Sysstat, bind-utils and Vim
+    # Consider the package module (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/package_module.html)
+    # and using a loop (https://docs.ansible.com/ansible/latest/playbook_guide/playbooks_loops.html)
+
+    - name: Ensure packages are present
+      ansible.builtin.package:
+        name: "{{ item }}"
+        state: present
+      with_items:
+        - NetworkManager
+        - chrony
+        - sysstat
+        - vim
+        - bind-utils
+
+    ### Install, enable and start the Apache (httpd) service and copy index.html to correct directory
+    # Consider the service module (https://docs.ansible.com/ansible/latest/collections/ansible/builtin/service_module.html)
+
+    - name: Enable and start Apache service
+      ansible.builtin.service:
+        name: httpd
+        enabled: true
+        state: started
+
+    - name: Copy index.html
+      ansible.builtin.copy:
+        src: index.html
+        dest: /var/www/html/index.html
+        mode: '644'
+
+    - name: Create dhclient.conf file
+      ansible.builtin.file:
+        path: /etc/dhcp/dhclient.conf
+        state: touch
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Set custom DNS server for DHCP
+      ansible.builtin.blockinfile:
+        dest: /etc/dhcp/dhclient.conf
+        block: |
+          prepend domain-name-servers 8.8.8.8;
+        state: present
+      register: dnschange
+
+    - name: Restart NetworkManager
+      ansible.builtin.service:
+        name: NetworkManager
+        state: restarted
+      when: dnschange.changed
+
+    - name: Add EPEL repo for RHEL 8
+      ansible.builtin.yum_repository:
+        name: epel
+        description: EPEL for Enterprise Linux 8
+        baseurl: https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm
+        enabled: true
+        gpgcheck: false
+      when: ansible_distribution_major_version | int == 8
+
+    - name: Add EPEL repo for RHEL 9
+      ansible.builtin.yum_repository:
+        name: epel
+        description: EPEL for Enterprise Linux 9
+        baseurl: https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+        enabled: true
+        gpgcheck: false
+      when: ansible_distribution_major_version | int == 9
+
+    - name: Check to see the current status of FIPS mode
+      command: /usr/bin/fips-mode-setup --check
+      register: is_fips_enabled
+      changed_when: false
+      failed_when: false
+
+    - name: Enable FIPS mode
+      command: /usr/bin/fips-mode-setup --enable
+
+    - name: Ensure openscap-scanner is installed
+      package:
+        name: openscap-scanner
+        state: present
