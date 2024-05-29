@@ -1,0 +1,7 @@
+---
+# tasks file for security_package_update
+- name: Update all security-related DNF packages
+  ansible.builtin.dnf:
+    name: '*'
+    state: latest
+    security: true

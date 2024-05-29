@@ -1,0 +1,32 @@
+---
+# tasks file for add_user
+
+- name: Create a new user
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    state: present
+    create_home: true
+    group: admin
+
+- name: Give new user sudo privileges (wheel group)
+  ansible.builtin.user:
+    name: "{{ user_name }}"
+    groups: wheel
+    append: true
+
+- name: Ensure user is present
+  block:
+    - name: Check user existence
+      ansible.builtin.command:
+        cmd: "id {{ user_name }}"
+      register: user_check
+
+    - name: Report on present user account
+      ansible.builtin.debug:
+        msg: "User {{ user_name }} exists."
+      when: user_check.rc == 0
+
+    - name: Report on absent user account
+      ansible.builtin.debug:
+        msg: "User {{ user_name }} does not exist."
+      when: user_check.rc != 0
