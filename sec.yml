@@ -1,0 +1,10 @@
+---
+- name: System Setup
+  hosts: all
+  become: true
+
+  tasks:
+
+    - name: Include DNF security package update role
+      ansible.builtin.include_role:
+        name: aws_rhel8_nist_cui
