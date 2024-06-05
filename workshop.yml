@@ -132,7 +132,7 @@
       ansible.builtin.service:
         name: NetworkManager
         state: restarted
-      when: dnschange.changed
+      when: dnschange is changed
 
     ### Depending on RHEL version running, add EPEL repo for RHEL 8 or 9
     # Consider using a conditional to only run a task if the RHEL version is correct for the respective repo
@@ -171,8 +171,11 @@
 
     ### Ensure openscap-scanner is installed
 
-    # - name: Ensure openscap-scanner is installed
-    #   ansible.builtin.package:
-    #     name: openscap-scanner
-    #     state: present
+    - name: Ensure openscap-scanner is installed
+      ansible.builtin.package:
+        name: openscap-scanner
+        state: present
 
+    - name: Include NIST-CUI security role
+      ansible.builtin.include_role:
+        name: aws_rhel8_nist_cui
